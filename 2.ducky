@@ -1,1 +1,2 @@
+REM Shift+s should print capital S (to test the Shift modifier)
 SHIFT s

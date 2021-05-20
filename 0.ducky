@@ -4,4 +4,5 @@ REM Type first part
 STRING Hello
 REM Delay for 100 ms
 DELAY 10
+STRING world!
 LIGHTS OFF self
