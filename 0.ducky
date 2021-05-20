@@ -1,0 +1,7 @@
+REM Turn own light on white
+LIGHTS ON self 255 255 255
+REM Type first part
+STRING Hello
+REM Delay for 100 ms
+DELAY 10
+LIGHTS OFF self
