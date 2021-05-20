@@ -3,6 +3,9 @@
 #include <DigiKeyboard.h>
 #include <Adafruit_NeoPixel.h>
 
+// Uncomment to print ADC readings (to aid in setting the BOUNDS array)
+//#define PRINT_ADC
+
 /**
  * @brief The number of buttons (and therefore lights) in the keyboard
  */
@@ -96,26 +99,33 @@ void setup()
 }
 
 bool pressed = false;
+#ifdef PRINT_ADC
+uchar i = 0;
+#endif
 
 // cppcheck-suppress unusedFunction
 void loop()
 {
   int val = analogRead(BUTTON_PIN);
 
-  /*if (++i >= 60)
-  { // Only print every 60th ADC reading
+#ifdef PRINT_ADC
+  if (++i >= 20)
+  { // Only print every 20th ADC reading, approx. 1 per second
     i = 0;
     DigiKeyboard.sendKeyStroke(0);
     DigiKeyboard.println(val);
-  }*/
+  }
+#endif
 
   int pressedButton = getButtonIndex(val);
   if (pressedButton > -1) // Some button was pressed
   {
     if (!pressed)
-    { // Just pressed, turn light on and print button data
-      //turnOn(pressedButton);
+    { // Just pressed, execute the pressed button command
+// Don't press the buttons if on ADC calibration mode
+#ifndef PRINT_ADC
       type(pressedButton);
+#endif
 
       pressed = true;
     }
@@ -124,7 +134,9 @@ void loop()
   {
     if (pressed) // Just released, turn all lights off
     {
-      fillStrip(0, 0, 0);
+      // TODO: Maybe leave all light control to the DuckyScript files? 
+      // This line makes it impossible to implement a "toggle" button, since it would turn off whenever it is released
+      fillStrip(0, 0, 0); 
 
       pressed = false;
     }
@@ -171,15 +183,8 @@ int getButtonIndex(int val)
   {
     const int *b = BOUNDS[i];
     int lower = b[0], upper = b[1];
-    /*DigiKeyboard.println(i);
-    DigiKeyboard.println(val);
-    DigiKeyboard.println(lower);
-    DigiKeyboard.println(upper);
-    DigiKeyboard.println("");*/
     if ((val > lower) && (val < upper))
     {
-      /*DigiKeyboard.print("Found key ");
-      DigiKeyboard.println(i);*/
       return i;
     }
   }

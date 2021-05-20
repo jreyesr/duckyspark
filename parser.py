@@ -6,15 +6,15 @@ import sys
 
 def is_modifier_combo(text: str) -> bool:
     """
-    Determines if the passed string is a combination of modifier keys, such as CTRL+ALT+SHIFT+WINDOWS
+    Determines if the passed string is a combination of modifier keys, such as CTRL-ALT-SHIFT-WINDOWS
 
-    Used, for example, in the commands CTRL+SHIFT ESCAPE or CTRL+ALT DELETE
+    Used, for example, in the commands CTRL-SHIFT ESCAPE or CTRL+ALT DELETE
 
     Returns a list of all the modifiers in the string, or an empty list if the string is not purely composed of modifiers
     """
     VALID_MODIFIERS = ("CTRL", "ALT", "SHIFT", "WINDOWS", "MENU")
     assert " " not in text, "Pass only the first word in a command to is_modifier_combo"
-    pieces = text.split("+")
+    pieces = text.split("-")
     if not all([p in VALID_MODIFIERS for p in pieces]):
         return []
     return pieces # all the elements of pieces are guaranted to be modifiers
