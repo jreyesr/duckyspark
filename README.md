@@ -4,7 +4,7 @@ A basic reimplementation of a [Rubber Ducky](https://shop.hak5.org/collections/s
 
 Now with extra fancy lights! 
 
-DuckySpark is more aimed towards "programmable macro keyboard with flashing lights" than "covert flash-drive-looking device that types 1337 commandz".
+DuckySpark is more aimed towards "programmable macro keyboard with flashing lights" than "covert flash-drive-looking device that types 1337 commandz". UPDATE: See the [duckyPad](https://www.tindie.com/products/dekuNukem/duckypad-do-it-all-mechanical-macropad/) for a much fancier version of DuckySpark.
 
 DuckySpark uses the [DuckyScript](https://docs.hak5.org/hc/en-us/articles/360010555153-Ducky-Script-the-USB-Rubber-Ducky-language) programming language (in progress!) to automatically generate the actions that will be triggered on each button press.
 
@@ -74,6 +74,7 @@ This project uses a slightly modified version of the original DuckyScript.
 The main differences between that specification and DuckySpark's script language are:
 
 * The DEFAULT_DELAY command (also known as DEFAULTDELAY) is not implemented.
+* The DELAY command argument is specified in milliseconds. [The original documentation](https://docs.hak5.org/hc/en-us/articles/360010555153-Ducky-Script-the-USB-Rubber-Ducky-language) is not clear on that: it says that "DELAY time is specified in milliseconds" but the example uses `DELAY 50` to wait for 500 ms.
 * The GUI alias for the WINDOWS key is not implemented (that is, you should use WINDOWS even if programming for a Mac)
 * The APP alias for the MENU key is not implemented.
 * The CONTROL alias for the CTRL key is not implemented.

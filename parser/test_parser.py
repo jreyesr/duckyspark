@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import io
 import unittest
 from contextlib import redirect_stderr
@@ -14,14 +16,16 @@ class TestParser(unittest.TestCase):
         """
         Helper function that calls `process_line` with the passed line and some defaults
 
-        Also asserts that process_line returns a single element
+        Also asserts that `process_line` returns a single element
+
+        `self.out` will contain the generated C code after this function returns.
         """
         parser.process_line(filenum=0, line=line, linenum=0, out=self.out)
         self.assertEqual(len(self.out), 1)
 
     def _compare(self, line, expected):
         """
-        Helper function that calls `process_line` and compares the returned code with `expected`
+        Helper function that calls `process_line` and compares the generated C code with `expected`
         """
         self._process(line)
         self.assertEqual(self.out[0], expected)
@@ -61,7 +65,7 @@ class TestParser(unittest.TestCase):
             "ALT F4", "DigiKeyboard.sendKeyStroke(KEY_F4, MODIFIERKEY_ALT);")
 
     def test_delay(self):
-        self._compare("DELAY 10", "DigiKeyboard.delay(100);")
+        self._compare("DELAY 100", "DigiKeyboard.delay(100);")
 
     def test_lights_on(self):
         self._compare("LIGHTS ON self 1 2 3",
@@ -84,32 +88,66 @@ class TestParser(unittest.TestCase):
                       "/* Automatic comment: foobar smart comment */")
 
     def test_windows_key_doesnt_work_alone(self):
-        with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
+        with self.assertRaises(AssertionError) as cm:
             self._process("WINDOWS")
+        self.assertEqual(
+            str(cm.exception), "Modifier keys must be followed by an actual key to press!")
 
     def test_modifiers_dont_work_alone(self):
         for m in ("CTRL", "SHIFT", "ALT"):
-            with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
+            with self.assertRaises(AssertionError) as cm:
                 self._process(m)
+            self.assertEqual(
+                str(cm.exception), "Modifier keys must be followed by an actual key to press!")
+
+    def test_modifier_takes_single_key(self):
+        with self.assertRaises(AssertionError) as cm:
+            self._process("SHIFT abc")
+        self.assertEqual(str(cm.exception), "abc is not a recognized special key")
+
+
+    def test_modifier_with_invalid_key(self):
+        with self.assertRaises(AssertionError) as cm:
+            self._process("SHIFT PRINTSCREEN")
+        self.assertEqual(str(cm.exception), "Key PRINTSCREEN doesn't support the modifiers ['SHIFT']")
 
     def test_modifiers_should_be_together(self):
-        with self.assertRaises(AssertionError, msg="Key SHIFT doesn't support the modifiers ['ALT']"):
+        with self.assertRaises(AssertionError) as cm:
             self._process("ALT SHIFT")
+        self.assertEqual(str(cm.exception),
+                         "SHIFT is not a recognized special key")
+
+    def test_modifiers_should_be_together_2(self):
+        with self.assertRaises(AssertionError) as cm:
+            self._process("CTRL-ALT WINDOWS")
+        self.assertEqual(
+            str(cm.exception), "WINDOWS is not a recognized special key")
 
     def test_mod_combo_must_have_key(self):
-        with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
+        with self.assertRaises(AssertionError) as cm:
             self._process("CTRL-ALT-SHIFT")
+        self.assertEqual(
+            str(cm.exception), "Modifier keys must be followed by an actual key to press!")
 
     def test_two_keystrokes_not_allowed(self):
-        with self.assertRaises(AssertionError, msg="Pass a single keypress per line, not DOWNARROW a"):
+        with self.assertRaises(AssertionError) as cm:
             self._process("DOWNARROW a")
+        self.assertEqual(str(cm.exception),
+                         "Pass a single keypress per line, not DOWNARROW a")
 
     def test_dont_mix_string_and_specials(self):
+        # STRING should not get confused if you ask it to print a string that looks like a special key
         self._compare("STRING DOWNARROW", 'DigiKeyboard.print("DOWNARROW");')
 
+    def test_dont_mix_string_and_specials_2(self):
+        # A special key without STRING shoud be specially treated
+        self._compare("DOWNARROW", 'DigiKeyboard.sendKeyStroke(KEY_DOWN);')
+
     def test_delay_param_nonint(self):
-        with self.assertRaises(AssertionError, msg="Pass an integer to DELAY, not foo"):
+        with self.assertRaises(AssertionError) as cm:
             self._process("DELAY foo")
+        self.assertEqual(str(cm.exception),
+                         "Pass an integer to DELAY, not foo")
 
     def test_invalid_command(self):
         f = io.StringIO()

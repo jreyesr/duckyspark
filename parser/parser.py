@@ -94,8 +94,7 @@ def process_line(filenum: int, line: str, linenum: int, out: List[str]):
     elif line.startswith("DELAY "):
         val = line[6:]
         assert val.isdigit(), f"Pass an integer to DELAY, not {val}"
-        delay = int(val)*10
-        out.append(f'DigiKeyboard.delay({delay});')
+        out.append(f'DigiKeyboard.delay({val});')
     # DEFAULTDELAY / DEFAULT_DELAY
     elif line.startswith("LIGHTS ON "):
         _, _, target, r, g, b = line.split(" ")
@@ -116,6 +115,7 @@ def process_line(filenum: int, line: str, linenum: int, out: List[str]):
         if len(key) == 1:  # single key, type it as ASCII char
             keycode = f"pgm_read_byte_near(keycodes_ascii + (\'{key}\' - 0x20))"
         else:
+            assert key in SPECIAL_KEYCODES.keys(), f"{key} is not a recognized special key"
             assert all([key in ALLOWED_KEYS_FOR_MOD[mod] for mod in mods]
                        ), f"Key {key} doesn't support the modifiers {mods}"
             keycode = SPECIAL_KEYCODES[key]
