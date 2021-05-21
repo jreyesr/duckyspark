@@ -44,9 +44,9 @@ Just because, DuckySpark can be controlled with [DuckyScript](https://docs.hak5.
 
 ### DuckyScript parser 
 
-`parser.py` is a Python script that parses DuckyScript files and generates C code that can be compiled with the base firmware. The script emits C code to the standard output.
+`parser/parser.py` is a Python script that parses DuckyScript files and generates C code that can be compiled with the base firmware. The script emits C code to the standard output.
 
-To run the parser, place one or more `.ducky` files on the root directory, fill them with commands and execute `./parser.py *.ducky`. The script will print the generated C code to the console. Alternatively, to automatically write the code to a file, use `./parser.py *.ducky | tee cb.c` (this still allows you to see the output, but also writes it to `cb.c`).
+To run the parser, place one or more `.ducky` files on the root directory, fill them with commands and execute `./parser/parser.py *.ducky`. The script will print the generated C code to the console. Alternatively, to automatically write the code to a file, use `./parser/parser.py *.ducky | tee cb.c` (this still allows you to see the output, but also writes it to `cb.c`).
 
 The generated C code must be placed on the file `cb.c` in the root directory. The firmware on `src/main.cpp` must then be recompiled, and it will include the code on `cb.c` in the compiled binary.
 
