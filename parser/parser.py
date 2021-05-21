@@ -77,7 +77,7 @@ def is_extended_command(text: str) -> bool:
 
     Returns True if the string is in the list of special keys
     """
-    assert " " not in text, "Pass a single word to is_extended_command"
+    assert " " not in text, f"Pass a single keypress per line, not {text}"
     return text in SPECIAL_KEYCODES.keys()
 
 
@@ -92,7 +92,9 @@ def process_line(filenum: int, line: str, linenum: int, out: List[str]):
     elif line.startswith("STRING "):
         out.append(f'DigiKeyboard.print("{line[7:]}");')
     elif line.startswith("DELAY "):
-        delay = int(line[6:])*10
+        val = line[6:]
+        assert val.isdigit(), f"Pass an integer to DELAY, not {val}"
+        delay = int(val)*10
         out.append(f'DigiKeyboard.delay({delay});')
     # DEFAULTDELAY / DEFAULT_DELAY
     elif line.startswith("LIGHTS ON "):

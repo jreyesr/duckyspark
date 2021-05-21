@@ -1,17 +1,28 @@
+import io
 import unittest
+from contextlib import redirect_stderr
 
 import parser
+
 
 class TestParser(unittest.TestCase):
     def setUp(self) -> None:
         self.out = []
         return super().setUp()
-    
+
     def _process(self, line: str):
+        """
+        Helper function that calls `process_line` with the passed line and some defaults
+
+        Also asserts that process_line returns a single element
+        """
         parser.process_line(filenum=0, line=line, linenum=0, out=self.out)
         self.assertEqual(len(self.out), 1)
 
     def _compare(self, line, expected):
+        """
+        Helper function that calls `process_line` and compares the returned code with `expected`
+        """
         self._process(line)
         self.assertEqual(self.out[0], expected)
 
@@ -19,56 +30,96 @@ class TestParser(unittest.TestCase):
         self._compare("STRING abC", 'DigiKeyboard.print("abC");')
 
     def test_modifier(self):
-        self._compare("SHIFT a", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('a' - 0x20)), MODIFIERKEY_SHIFT);")
+        self._compare(
+            "SHIFT a", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('a' - 0x20)), MODIFIERKEY_SHIFT);")
 
     def test_modifier_2(self):
-        self._compare("WINDOWS e", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('e' - 0x20)), MODIFIERKEY_GUI);")
+        self._compare(
+            "WINDOWS e", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('e' - 0x20)), MODIFIERKEY_GUI);")
 
     def test_multiple_modifiers(self):
-        self._compare("CTRL-SHIFT z", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('z' - 0x20)), MODIFIERKEY_CTRL + MODIFIERKEY_SHIFT);")
+        self._compare(
+            "CTRL-SHIFT z", "DigiKeyboard.sendKeyStroke(pgm_read_byte_near(keycodes_ascii + ('z' - 0x20)), MODIFIERKEY_CTRL + MODIFIERKEY_SHIFT);")
 
     def test_arrows(self):
         for a in ("DOWN", "UP", "LEFT", "RIGHT"):
             self._compare(f"{a}ARROW", f"DigiKeyboard.sendKeyStroke(KEY_{a});")
-            self.out = [] # manually empty the array!
+            self.out = []  # manually empty the array!
 
     def test_f_keys(self):
         for f in range(12):
-            self._compare(f"F{f+1}", f"DigiKeyboard.sendKeyStroke(KEY_F{f+1});")
-            self.out = [] # manually empty the array!
+            self._compare(
+                f"F{f+1}", f"DigiKeyboard.sendKeyStroke(KEY_F{f+1});")
+            self.out = []  # manually empty the array!
 
     def test_modifiers_plus_special_key(self):
-        self._compare("CTRL-ALT DELETE", f"DigiKeyboard.sendKeyStroke(KEY_DELETE, MODIFIERKEY_CTRL + MODIFIERKEY_ALT);")
+        self._compare(
+            "CTRL-ALT DELETE", f"DigiKeyboard.sendKeyStroke(KEY_DELETE, MODIFIERKEY_CTRL + MODIFIERKEY_ALT);")
 
     def test_alt_f4(self):
-        self._compare("ALT F4", "DigiKeyboard.sendKeyStroke(KEY_F4, MODIFIERKEY_ALT);")
+        self._compare(
+            "ALT F4", "DigiKeyboard.sendKeyStroke(KEY_F4, MODIFIERKEY_ALT);")
 
     def test_delay(self):
         self._compare("DELAY 10", "DigiKeyboard.delay(100);")
 
     def test_lights_on(self):
-        self._compare("LIGHTS ON self 1 2 3", "pixels.setPixelColor(0, _COLOR(1,2,3));\npixels.show();")
+        self._compare("LIGHTS ON self 1 2 3",
+                      "pixels.setPixelColor(0, _COLOR(1,2,3));\npixels.show();")
 
     def test_lights_on_explicit_index(self):
-        self._compare("LIGHTS ON 100 1 2 3", "pixels.setPixelColor(100, _COLOR(1,2,3));\npixels.show();")
+        self._compare("LIGHTS ON 100 1 2 3",
+                      "pixels.setPixelColor(100, _COLOR(1,2,3));\npixels.show();")
 
     def test_lights_off(self):
-        self._compare("LIGHTS OFF self", "pixels.setPixelColor(0, 0);\npixels.show();")
+        self._compare("LIGHTS OFF self",
+                      "pixels.setPixelColor(0, 0);\npixels.show();")
 
     def test_lights_off_explicit_index(self):
-        self._compare("LIGHTS OFF 100", "pixels.setPixelColor(100, 0);\npixels.show();")
+        self._compare("LIGHTS OFF 100",
+                      "pixels.setPixelColor(100, 0);\npixels.show();")
 
     def test_comment(self):
-        self._compare("REM foobar smart comment", "/* Automatic comment: foobar smart comment */")
+        self._compare("REM foobar smart comment",
+                      "/* Automatic comment: foobar smart comment */")
 
-    
-    def test_windows_key_doesnt_work_alone(self): 
+    def test_windows_key_doesnt_work_alone(self):
         with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
             self._process("WINDOWS")
+
+    def test_modifiers_dont_work_alone(self):
+        for m in ("CTRL", "SHIFT", "ALT"):
+            with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
+                self._process(m)
+
+    def test_modifiers_should_be_together(self):
+        with self.assertRaises(AssertionError, msg="Key SHIFT doesn't support the modifiers ['ALT']"):
+            self._process("ALT SHIFT")
 
     def test_mod_combo_must_have_key(self):
         with self.assertRaises(AssertionError, msg="Modifier keys must be followed by an actual key to press!"):
             self._process("CTRL-ALT-SHIFT")
+
+    def test_two_keystrokes_not_allowed(self):
+        with self.assertRaises(AssertionError, msg="Pass a single keypress per line, not DOWNARROW a"):
+            self._process("DOWNARROW a")
+
+    def test_dont_mix_string_and_specials(self):
+        self._compare("STRING DOWNARROW", 'DigiKeyboard.print("DOWNARROW");')
+
+    def test_delay_param_nonint(self):
+        with self.assertRaises(AssertionError, msg="Pass an integer to DELAY, not foo"):
+            self._process("DELAY foo")
+
+    def test_invalid_command(self):
+        f = io.StringIO()
+        with redirect_stderr(f):  # HACK Redirect stderr to a file object to assert on it
+            parser.process_line(
+                filenum=0, line="FOOBAR_WRONG_COMMAND", linenum=123, out=self.out)
+            self.assertEqual(len(self.out), 0)
+            self.assertEqual(f.getvalue(
+            ), 'ERROR: Command "FOOBAR_WRONG_COMMAND" in line 124 not recognized\n')
+
 
 if __name__ == '__main__':
     unittest.main()

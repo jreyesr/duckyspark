@@ -59,6 +59,12 @@ The generated C code must be placed on the file `cb.c` in the root directory. Th
 
 The parser uses [Typer](https://typer.tiangolo.com/) to build the CLI. Typer can be installed with `pip install typer`.
 
+#### Tester
+
+Since a parser is a reasonably complex piece of code, some test cases are useful to try and catch corner cases. The test script uses [unittest](https://docs.python.org/3/library/unittest.html).
+
+You should not need to run the tests unless you modify the parser. To run the parser, open a terminal session on the `parser/` directory and execute `python3 test_parser.py`.
+
 ### New and improved DuckyScript. Now with 100% more lights!
 
 This project uses a slightly modified version of the original DuckyScript.
