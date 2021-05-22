@@ -20,8 +20,13 @@ class TestParser(unittest.TestCase):
 
         `self.out` will contain the generated C code after this function returns.
         """
-        parser.process_line(filenum=0, line=line, linenum=0, out=self.out)
-        self.assertEqual(len(self.out), 1)
+        f = io.StringIO()
+        with redirect_stderr(f):  # HACK Redirect stderr to a file object to assert on it
+            parser.process_line(filenum=0, line=line, linenum=0, out=self.out)
+            stderr = f.getvalue().strip()
+            self.assertEqual(
+                stderr, "", f'Got unexpected error mesage: "{stderr}"')
+            self.assertEqual(len(self.out), 1)
 
     def _compare(self, line, expected):
         """
@@ -87,6 +92,11 @@ class TestParser(unittest.TestCase):
         self._compare("REM foobar smart comment",
                       "/* Automatic comment: foobar smart comment */")
 
+    def test_whitespace_keys(self):
+        for k in ("ENTER", "SPACE", "TAB"):
+            self._compare(k, f"DigiKeyboard.sendKeyStroke(KEY_{k});")
+            self.out = []
+
     def test_windows_key_doesnt_work_alone(self):
         with self.assertRaises(AssertionError) as cm:
             self._process("WINDOWS")
@@ -103,19 +113,41 @@ class TestParser(unittest.TestCase):
     def test_modifier_takes_single_key(self):
         with self.assertRaises(AssertionError) as cm:
             self._process("SHIFT abc")
-        self.assertEqual(str(cm.exception), "abc is not a recognized special key")
-
+        self.assertEqual(str(cm.exception),
+                         "abc is not a recognized special key")
 
     def test_modifier_with_invalid_key(self):
         with self.assertRaises(AssertionError) as cm:
             self._process("SHIFT PRINTSCREEN")
-        self.assertEqual(str(cm.exception), "Key PRINTSCREEN doesn't support the modifiers ['SHIFT']")
+        self.assertEqual(
+            str(cm.exception), "Key PRINTSCREEN doesn't support the modifiers ['SHIFT']")
 
     def test_modifiers_should_be_together(self):
         with self.assertRaises(AssertionError) as cm:
             self._process("ALT SHIFT")
         self.assertEqual(str(cm.exception),
                          "SHIFT is not a recognized special key")
+
+    def test_locks_must_be_alone(self):
+        KEYCODES = {"CAPSLOCK": "CAPS_LOCK",
+                    "NUMLOCK": "NUM_LOCK", "SCROLLOCK": "SCROLL_LOCK"}
+        for l in ("CAPSLOCK", "NUMLOCK", "SCROLLOCK"):
+            with self.assertRaises(AssertionError) as cm:
+                self._process(f"{l} abc")
+            self.assertEqual(str(cm.exception),
+                             f"Pass a single keypress per line, not {l} abc")
+            self.out = []
+
+            self._compare(l, f"DigiKeyboard.sendKeyStroke(KEY_{KEYCODES[l]});")
+
+    def test_locks_dont_work_with_modifiers(self):
+        for l in ("CAPSLOCK", "NUMLOCK", "SCROLLOCK"):
+            for m in ("CTRL", "SHIFT", "ALT", "WINDOWS"):
+                with self.assertRaises(AssertionError) as cm:
+                    self._process(f"{m} {l}")
+                self.assertEqual(
+                    str(cm.exception), f"Key {l} doesn't support the modifiers ['{m}']")
+                self.out = []
 
     def test_modifiers_should_be_together_2(self):
         with self.assertRaises(AssertionError) as cm:
@@ -155,8 +187,8 @@ class TestParser(unittest.TestCase):
             parser.process_line(
                 filenum=0, line="FOOBAR_WRONG_COMMAND", linenum=123, out=self.out)
             self.assertEqual(len(self.out), 0)
-            self.assertEqual(f.getvalue(
-            ), 'ERROR: Command "FOOBAR_WRONG_COMMAND" in line 124 not recognized\n')
+            self.assertEqual(f.getvalue(),
+                             'ERROR: Command "FOOBAR_WRONG_COMMAND" in line 124 not recognized\n')
 
 
 if __name__ == '__main__':

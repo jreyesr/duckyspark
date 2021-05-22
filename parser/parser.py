@@ -44,6 +44,7 @@ SPECIAL_KEYCODES = {
     "SCROLLOCK": "KEY_SCROLL_LOCK",
     "SPACE": "KEY_SPACE",
     "TAB": "KEY_TAB",
+    "ENTER": "KEY_ENTER",
     "MENU": "KEY_MENU",
     # Autogenerate F-keys mappings
     **{f_key: f"KEY_{f_key}" for f_key in F_KEYS},
